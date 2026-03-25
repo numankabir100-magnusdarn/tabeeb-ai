@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TABEEB AI - Pakistan's First Medical AI Assistant</title>
+    <meta name="description" content="TABEEB AI - Pakistan's first local AI-powered medical assistant and symptom checker">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                    </svg>
+                    <h1>TABEEB AI</h1>
+                </div>
+                <div class="header-actions">
+                    <div class="emergency-notice">
+                        <span class="emergency-icon">🚨</span>
+                        <span>ہنگامی صورت میں 1122 پر کال کریں (For emergencies, call 1122)</span>
+                    </div>
+                    <div class="language-toggle">
+                        <button id="langToggle" class="lang-btn">
+                            <span class="lang-icon">🌐</span>
+                            <span class="lang-text">English</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <!-- Medical Disclaimer -->
+            <section class="disclaimer">
+                <div class="disclaimer-content">
+                    <strong>⚠️ طبی انتباہ (Medical Disclaimer):</strong> 
+                    یہ ایپلیکیشن پیشہ ورانہ طبی مشورے کا متبادل نہیں ہے۔ ہمیشہ اہل صحت کی دیکھ بھال سے مشورہ کریں۔
+                    (This application is NOT a substitute for professional medical advice. Always consult qualified healthcare providers.)
+                </div>
+            </section>
+
+            <!-- Navigation Tabs -->
+            <div class="tabs">
+                <button class="tab-button active" data-tab="smart-triage">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 11H3v2h6v-2zm0-4H3v2h6V7zm0 8H3v2h6v-2zm12-8h-6v2h6V7zm0 4h-6v2h6v-2zm0 4h-6v2h6v-2z"/>
+                    </svg>
+                    ہوشیار علامات کی جانچ (Smart Triage)
+                </button>
+                <button class="tab-button" data-tab="lab-report">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14,2 14,8 20,8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <polyline points="10,9 9,9 8,9"/>
+                    </svg>
+                    لیب رپورٹ انٹرپریٹر (Lab Report)
+                </button>
+                <button class="tab-button" data-tab="pharmacy">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                        <polyline points="17,21 17,13 7,13 7,21"/>
+                        <polyline points="7,3 7,8 15,8"/>
+                    </svg>
+                    دوا کی قیمت (Pharmacy)
+                </button>
+                <button class="tab-button" data-tab="welfare">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                        <polyline points="9,22 9,12 15,12 15,22"/>
+                    </svg>
+                    ویلفیئر اسپتالیں (Welfare)
+                </button>
+                <button class="tab-button" data-tab="home-remedies">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                        <polyline points="9,22 9,12 15,12 15,22"/>
+                    </svg>
+                    گھریلو علاج (Home Remedies)
+                </button>
+                <button class="tab-button" data-tab="medication-reminder">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12,6 12,12 16,14"/>
+                    </svg>
+                    دوا کی یاد دہانی (Reminders)
+                </button>
+                <button class="tab-button" data-tab="find-doctor">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                    </svg>
+                    ڈاکٹر تلاش کریں (Find Doctor)
+                </button>
+            </div>
+
+            <!-- Smart Triage Tab -->
+            <section id="smart-triage" class="tab-content active">
+                <div class="card">
+                    <h2>ہوشیار علامات کی جانچ (Smart Symptom Triage)</h2>
+                    <form id="smart-triage-form">
+                        <div class="form-group">
+                            <label for="smart-symptoms">اپنی علامات بیان کریں (Describe symptoms):</label>
+                            <textarea 
+                                id="smart-symptoms" 
+                                name="symptoms" 
+                                rows="4" 
+                                placeholder="مثال: سر درد، بخار، کھانسی... (e.g., headache, fever, cough...)"
+                                required
+                            ></textarea>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="smart-duration">مدت (Duration):</label>
+                                <select id="smart-duration" name="duration">
+                                    <option value="">منتخب کریں</option>
+                                    <option value="few hours">چند گھنٹے</option>
+                                    <option value="1 day">ایک دن</option>
+                                    <option value="2-3 days">2-3 دن</option>
+                                    <option value="4-7 days">4-7 دن</option>
+                                    <option value="1-2 weeks">1-2 ہفتے</option>
+                                    <option value="more than 2 weeks">2 ہفتے سے زیادہ</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="smart-severity">شدت (Severity):</label>
+                                <select id="smart-severity" name="severity">
+                                    <option value="">منتخب کریں</option>
+                                    <option value="mild">ہلکی</option>
+                                    <option value="moderate">متوسط</option>
+                                    <option value="severe">شدید</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            ہوشیار تجزیہ کریں (Smart Analysis)
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Follow-up Questions Section -->
+                <div id="followup-questions" class="results-section" style="display: none;">
+                    <div class="card">
+                        <h3>اضافی سوالات (Follow-up Questions)</h3>
+                        <div id="questions-content"></div>
+                    </div>
+                </div>
+
+                <!-- Triage Results Section -->
+                <div id="triage-results" class="results-section" style="display: none;">
+                    <div class="card">
+                        <h3>ٹرائیج نتائج (Triage Results)</h3>
+                        <div id="triage-content"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Lab Report Tab -->
+            <section id="lab-report" class="tab-content">
+                <div class="card">
+                    <h2>لیب رپورٹ انٹرپریٹر (Lab Report Interpreter)</h2>
+                    <form id="lab-report-form" enctype="multipart/form-data">
+                        <div class="form-group">
+                            <label for="lab-report-file">لیب رپورٹ اپ لوڈ کریں (Upload Lab Report):</label>
+                            <input 
+                                type="file" 
+                                id="lab-report-file" 
+                                name="labReport" 
+                                accept="image/*"
+                                required
+                            />
+                            <small>JPEG، PNG، یا JPG فارمیٹ میں لیب رپورٹ کی تصویر اپ لوڈ کریں</small>
+                        </div>
+                        <button type="submit" class="btn btn-secondary">
+                            رپورٹ انٹرپریٹ کریں (Interpret Report)
+                        </button>
+                    </form>
+                </div>
+
+                <div id="lab-results" class="results-section" style="display: none;">
+                    <div class="card">
+                        <h3>رپورٹ کا تجزیہ (Report Analysis)</h3>
+                        <div id="lab-content"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Pharmacy Tab -->
+            <section id="pharmacy" class="tab-content">
+                <div class="card">
+                    <h2>دوا کی قیمت کا موازنہ (Pharmacy Price Comparison)</h2>
+                    <form id="pharmacy-form">
+                        <div class="form-group">
+                            <label for="medicine-name">دوا کا نام (Medicine Name):</label>
+                            <input 
+                                type="text" 
+                                id="medicine-name" 
+                                name="medicine" 
+                                placeholder="مثال: Panadol, Disprin, Augmentin..."
+                                required
+                            />
+                        </div>
+                        <button type="submit" class="btn btn-secondary">
+                            قیمتیں تلاش کریں (Search Prices)
+                        </button>
+                    </form>
+                </div>
+
+                <div id="pharmacy-results" class="results-section" style="display: none;">
+                    <div class="card">
+                        <h3>قیمتوں کا موازنہ (Price Comparison)</h3>
+                        <div id="pharmacy-content"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Welfare Hospitals Tab -->
+            <section id="welfare" class="tab-content">
+                <div class="card">
+                    <h2>ویلفیئر اسپتالیں (Welfare Hospitals)</h2>
+                    <form id="welfare-form">
+                        <div class="form-group">
+                            <label for="city-select">شہر منتخب کریں (Select City):</label>
+                            <select id="city-select" name="city">
+                                <option value="rawalpindi">راولپنڈی (Rawalpindi)</option>
+                                <option value="islamabad">اسلام آباد (Islamabad)</option>
+                                <option value="lahore">لاہور (Lahore)</option>
+                                <option value="karachi">کراچی (Karachi)</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-secondary">
+                            اسپتالیں تلاش کریں (Find Hospitals)
+                        </button>
+                    </form>
+                </div>
+
+                <div id="welfare-results" class="results-section" style="display: none;">
+                    <div class="card">
+                        <h3>ویلفیئر اسپتالیں (Welfare Hospitals)</h3>
+                        <div id="welfare-content"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Home Remedies Tab -->
+            <section id="home-remedies" class="tab-content">
+                <div class="card">
+                    <h2>گھریلو علاج (Home Remedies)</h2>
+                    <form id="remedies-form">
+                        <div class="form-group">
+                            <label for="condition-input">حالت (Condition):</label>
+                            <input 
+                                type="text" 
+                                id="condition-input" 
+                                name="condition" 
+                                placeholder="مثال: cough, headache, fever..."
+                                required
+                            />
+                        </div>
+                        <button type="submit" class="btn btn-secondary">
+                            گھریلو علاج تلاش کریں (Find Home Remedies)
+                        </button>
+                    </form>
+                </div>
+
+                <div id="remedies-results" class="results-section" style="display: none;">
+                    <div class="card">
+                        <h3>گھریلو علاج (Home Remedies)</h3>
+                        <div id="remedies-content"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Medication Reminder Tab -->
+            <section id="medication-reminder" class="tab-content">
+                <div class="card">
+                    <h2>دوا کی یاد دہانی (Medication Reminder)</h2>
+                    <form id="reminder-form">
+                        <div class="form-group">
+                            <label for="phone-number">واٹس ایپ نمبر (WhatsApp Number):</label>
+                            <input 
+                                type="tel" 
+                                id="phone-number" 
+                                name="phoneNumber" 
+                                placeholder="03001234567 یا +923001234567"
+                                pattern="^(\+92|0)?3[0-9]{9}$"
+                                required
+                            />
+                            <small>پاکستانی فون نمبر درج کریں</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="medication-name">دوا کا نام (Medication Name):</label>
+                            <input 
+                                type="text" 
+                                id="medication-name" 
+                                name="medicationName" 
+                                placeholder="مثال: Panadol"
+                                required
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="dosage">ڈوز (Dosage):</label>
+                            <input 
+                                type="text" 
+                                id="dosage" 
+                                name="dosage" 
+                                placeholder="مثال: ایک ٹیبلیٹ"
+                                required
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="frequency">فریکوئنسی (Frequency):</label>
+                            <select id="frequency" name="frequency" required>
+                                <option value="">منتخب کریں</option>
+                                <option value="daily">روزانہ (Daily)</option>
+                                <option value="twice-daily">دو بار روزانہ (Twice Daily)</option>
+                                <option value="weekly">ہفتہ وار (Weekly)</option>
+                                <option value="as-needed">ضرورت کے مطابق (As Needed)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="reminder-times">وقت (Times):</label>
+                            <input 
+                                type="text" 
+                                id="reminder-times" 
+                                name="times" 
+                                placeholder="مثال: 9:00 AM, 9:00 PM"
+                                required
+                            />
+                            <small>کاماں سے الگ کر کے متعدد اوقات درج کریں</small>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            یاد دہانی سیٹ کریں (Set Reminder)
+                        </button>
+                    </form>
+                </div>
+
+                <div id="reminder-results" class="results-section" style="display: none;">
+                    <div class="card">
+                        <h3>یاد دہانی سیٹ ہو گئی (Reminder Set)</h3>
+                        <div id="reminder-content"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Find Doctor Tab -->
+            <section id="find-doctor" class="tab-content">
+                <div class="card">
+                    <h2>ڈاکٹر تلاش کریں (Find Specialist)</h2>
+                    <form id="doctor-form">
+                        <div class="form-group">
+                            <label for="specialty">ماہر (Specialty):</label>
+                            <select id="specialty" name="specialty" required>
+                                <option value="">انتخاب کریں</option>
+                                <option value="general physician">جنرل فزیشن (General Physician)</option>
+                                <option value="cardiologist">کارڈیالوجسٹ (Cardiologist)</option>
+                                <option value="neurologist">نیورولوجسٹ (Neurologist)</option>
+                                <option value="pediatrician">پیڈیاٹرشن (Pediatrician)</option>
+                                <option value="gynecologist">گائنیکالوجسٹ (Gynecologist)</option>
+                                <option value="dermatologist">ڈرمیٹالوجسٹ (Dermatologist)</option>
+                                <option value="orthopedic">آرتھوڈک (Orthopedic)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="doctor-city">شہر (City):</label>
+                            <select id="doctor-city" name="city" required>
+                                <option value="rawalpindi">راولپنڈی (Rawalpindi)</option>
+                                <option value="islamabad">اسلام آباد (Islamabad)</option>
+                                <option value="lahore">لاہور (Lahore)</option>
+                                <option value="karachi">کراچی (Karachi)</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            ڈاکٹر تلاش کریں (Find Doctors)
+                        </button>
+                    </form>
+                </div>
+
+                <div id="doctor-results" class="results-section" style="display: none;">
+                    <div class="card">
+                        <h3>ماہرین ڈاکٹر (Specialist Doctors)</h3>
+                        <div id="doctor-content"></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2024 TABEEB AI. پاکستان کا پہلا مقمی طبی AI معاون (Pakistan's First Local Medical AI Assistant). یہ صرف معلومات کے لیے ہے۔</p>
+                <div class="footer-links">
+                    <a href="#" onclick="showDisclaimer()">انتباہ (Disclaimer)</a>
+                    <a href="#" onclick="showEmergencyInfo()">ہنگامی معلومات (Emergency)</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Loading Overlay -->
+    <div id="loading" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p>تجزیہ کر رہا ہے... (Analyzing...)</p>
+    </div>
+
+    <script src="index.js"></script>
+</body>
+</html>

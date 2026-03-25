@@ -1,0 +1,42 @@
+{
+  "name": "tabeeb-ai",
+  "version": "1.0.0",
+  "description": "TABEEB AI - Pakistan's first local AI-powered medical assistant and symptom checker",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "npm run dev:server",
+    "dev:server": "nodemon server.js",
+    "build": "npm run build:client",
+    "build:client": "webpack --mode production",
+    "dev:client": "webpack serve --mode development",
+    "vercel-build": "npm run build:client"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "axios": "^1.6.0",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.1.5",
+    "multer": "^1.4.5-lts.1",
+    "sharp": "^0.33.0",
+    "tesseract.js": "^5.0.4",
+    "openai": "^4.20.1",
+    "twilio": "^4.19.0",
+    "node-cron": "^3.0.3",
+    "sqlite3": "^5.1.6"
+  },
+  "devDependencies": {
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^4.15.1",
+    "html-webpack-plugin": "^5.5.3",
+    "css-loader": "^6.8.1",
+    "style-loader": "^3.3.3",
+    "nodemon": "^3.0.1"
+  },
+  "keywords": ["tabeeb", "ai", "medical", "pakistan", "health", "symptom-checker", "doctor", "urdu"],
+  "author": "AI Assistant",
+  "license": "MIT"
+}
