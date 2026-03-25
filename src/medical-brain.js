@@ -5,6 +5,7 @@
  * This module contains the core medical intelligence, symptom analysis,
  * triage algorithms, and decision-making logic for TABEEB AI.
  */
+const fetch = require('node-fetch');
 
 class MedicalBrain {
     constructor() {
@@ -341,6 +342,11 @@ class MedicalBrain {
         4. Immediate recommendations
         5. When to seek emergency care (1122)`;
 
+        const controller = new AbortController();
+        const timeout = setTimeout(() => {
+            controller.abort();
+        }, 10000);
+
         try {
             const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
                 method: 'POST',
@@ -362,8 +368,11 @@ class MedicalBrain {
                     ],
                     temperature: 0.3,
                     max_tokens: 1000
-                })
+                }),
+                signal: controller.signal
             });
+
+            clearTimeout(timeout);
 
             if (!response.ok) {
                 throw new Error(`API request failed: ${response.status}`);

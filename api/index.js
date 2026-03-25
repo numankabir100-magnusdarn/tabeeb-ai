@@ -199,13 +199,5 @@ app.get('/api/find-specialist/:specialty', async (req, res) => {
     }
 });
 
-// Serve static files (for frontend)
-app.use(express.static(path.join(__dirname, '../dist')));
-
-// Catch-all handler for frontend routing
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../dist/index.html'));
-});
-
 // Export for Vercel
 module.exports = app;

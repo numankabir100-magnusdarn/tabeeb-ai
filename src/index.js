@@ -1,3 +1,38 @@
+import './styles.css';
+
+// Utility functions
+function escapeHtml(unsafe) {
+    if (typeof unsafe !== 'string') return unsafe;
+    return unsafe
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+}
+
+window.showToast = function(message, type = 'error') {
+    const toast = document.createElement('div');
+    toast.style.position = 'fixed';
+    toast.style.bottom = '20px';
+    toast.style.right = '20px';
+    toast.style.padding = '15px 25px';
+    toast.style.background = type === 'error' ? '#ef4444' : '#10b981';
+    toast.style.color = 'white';
+    toast.style.borderRadius = '8px';
+    toast.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+    toast.style.zIndex = '9999';
+    toast.style.transition = 'opacity 0.3s';
+    toast.innerHTML = `<strong>${type === 'error' ? 'Error' : 'Success'}:</strong> ${escapeHtml(message)}`;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 5000);
+}
+
 // DOM Elements
 const tabButtons = document.querySelectorAll('.tab-button');
 const tabContents = document.querySelectorAll('.tab-content');
@@ -37,10 +72,13 @@ let triageAnswers = {};
 let currentLanguage = 'english'; // 'english' or 'urdu'
 
 // Language toggle functionality
-document.getElementById('langToggle').addEventListener('click', () => {
-    currentLanguage = currentLanguage === 'english' ? 'urdu' : 'english';
-    updateLanguage();
-});
+const langToggleBtn = document.getElementById('langToggle');
+if (langToggleBtn) {
+    langToggleBtn.addEventListener('click', () => {
+        currentLanguage = currentLanguage === 'english' ? 'urdu' : 'english';
+        updateLanguage();
+    });
+}
 
 function updateLanguage() {
     const langBtn = document.getElementById('langToggle');
@@ -95,253 +133,298 @@ tabButtons.forEach(button => {
 });
 
 // Smart Triage Form Handler
-smartTriageForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const symptoms = document.getElementById('smart-symptoms').value
-        .split(',')
-        .map(s => s.trim())
-        .filter(s => s.length > 0);
-    
-    const duration = document.getElementById('smart-duration').value;
-    const severity = document.getElementById('smart-severity').value;
-    
-    if (symptoms.length === 0) {
-        showError('Please enter at least one symptom');
-        return;
-    }
-    
-    try {
-        showLoading();
+if (smartTriageForm) {
+    smartTriageForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
         
-        const response = await fetch('/api/smart-triage', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                symptoms,
-                duration,
-                severity,
-                answers: triageAnswers
-            })
-        });
+        const rawSymptoms = document.getElementById('smart-symptoms').value;
+        const symptoms = escapeHtml(rawSymptoms)
+            .split(',')
+            .map(s => s.trim())
+            .filter(s => s.length > 0);
         
-        const data = await response.json();
+        const duration = escapeHtml(document.getElementById('smart-duration').value);
+        const severity = escapeHtml(document.getElementById('smart-severity').value);
         
-        if (response.ok) {
-            displayTriageResults(data);
-        } else {
-            showError(data.error || 'An error occurred during triage');
+        if (symptoms.length === 0) {
+            showToast('Please enter at least one symptom', 'error');
+            return;
         }
-    } catch (error) {
-        showError('Network error. Please try again.');
-        console.error('Error:', error);
-    } finally {
-        hideLoading();
-    }
-});
+        
+        try {
+            showLoading();
+            
+            let data;
+            let retries = 3;
+            let success = false;
+            let lastError = null;
+            
+            while (retries > 0 && !success) {
+                try {
+                    const response = await fetch('/api/smart-triage', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            symptoms,
+                            duration,
+                            severity,
+                            answers: triageAnswers
+                        })
+                    });
+                    
+                    data = await response.json();
+                    
+                    if (response.ok) {
+                        success = true;
+                        showToast('Analysis complete', 'success');
+                        displayTriageResults(data);
+                    } else {
+                        throw new Error(data.error || 'An error occurred during triage');
+                    }
+                } catch (err) {
+                    lastError = err;
+                    retries--;
+                    if (retries > 0) {
+                        await new Promise(resolve => setTimeout(resolve, 1000 * (4 - retries))); // Exponential backoff: 1s, 2s, 3s
+                    }
+                }
+            }
+            
+            if (!success && lastError) {
+                throw lastError;
+            }
+        } catch (error) {
+            showToast(error.message || 'Network error. Please try again.', 'error');
+            console.error('Error:', error);
+        } finally {
+            hideLoading();
+        }
+    });
+}
 
 // Lab Report Form Handler
-labReportForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const fileInput = document.getElementById('lab-report-file');
-    const file = fileInput.files[0];
-    
-    if (!file) {
-        showError('Please select a lab report image');
-        return;
-    }
-    
-    try {
-        showLoading();
+if (labReportForm) {
+    labReportForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
         
-        const formData = new FormData();
-        formData.append('labReport', file);
+        const fileInput = document.getElementById('lab-report-file');
+        const file = fileInput.files[0];
         
-        const response = await fetch('/api/interpret-lab-report', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            displayLabResults(data);
-        } else {
-            showError(data.error || 'Failed to interpret lab report');
+        if (!file) {
+            window.showToast('Please select a lab report image');
+            return;
         }
-    } catch (error) {
-        showError('Network error. Please try again.');
-        console.error('Error:', error);
-    } finally {
-        hideLoading();
-    }
-});
+        
+        try {
+            showLoading();
+            
+            const formData = new FormData();
+            formData.append('labReport', file);
+            
+            const response = await fetch('/api/interpret-lab-report', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                window.showToast('Report interpreted successfully', 'success');
+                displayLabResults(data);
+            } else {
+                window.showToast(data.error || 'Failed to interpret lab report');
+            }
+        } catch (error) {
+            window.showToast('Network error. Please try again.');
+            console.error('Error:', error);
+        } finally {
+            hideLoading();
+        }
+    });
+}
 
 // Pharmacy Form Handler
-pharmacyForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const medicine = document.getElementById('medicine-name').value.trim();
-    
-    if (!medicine) {
-        showError('Please enter a medicine name');
-        return;
-    }
-    
-    try {
-        showLoading();
+if (pharmacyForm) {
+    pharmacyForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
         
-        const response = await fetch(`/api/pharmacy-prices/${encodeURIComponent(medicine)}`);
-        const data = await response.json();
+        const rawMedicine = document.getElementById('medicine-name').value;
+        const medicine = escapeHtml(rawMedicine).trim();
         
-        if (response.ok) {
-            displayPharmacyResults(data);
-        } else {
-            showError(data.error || 'Failed to fetch pharmacy prices');
+        if (!medicine) {
+            window.showToast('Please enter a medicine name');
+            return;
         }
-    } catch (error) {
-        showError('Network error. Please try again.');
-        console.error('Error:', error);
-    } finally {
-        hideLoading();
-    }
-});
+        
+        try {
+            showLoading();
+            
+            const response = await fetch(`/api/pharmacy-prices/${encodeURIComponent(medicine)}`);
+            const data = await response.json();
+            
+            if (response.ok) {
+                window.showToast('Prices fetched successfully', 'success');
+                displayPharmacyResults(data);
+            } else {
+                window.showToast(data.error || 'Failed to fetch pharmacy prices');
+            }
+        } catch (error) {
+            window.showToast('Network error. Please try again.');
+            console.error('Error:', error);
+        } finally {
+            hideLoading();
+        }
+    });
+}
 
 // Welfare Form Handler
-welfareForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const city = document.getElementById('city-select').value;
-    
-    try {
-        showLoading();
+if (welfareForm) {
+    welfareForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
         
-        const response = await fetch(`/api/welfare-hospitals?city=${encodeURIComponent(city)}`);
-        const data = await response.json();
+        const city = escapeHtml(document.getElementById('city-select').value);
         
-        if (response.ok) {
-            displayWelfareResults(data);
-        } else {
-            showError(data.error || 'Failed to fetch welfare hospitals');
+        try {
+            showLoading();
+            
+            const response = await fetch(`/api/welfare-hospitals?city=${encodeURIComponent(city)}`);
+            const data = await response.json();
+            
+            if (response.ok) {
+                window.showToast('Hospitals found', 'success');
+                displayWelfareResults(data);
+            } else {
+                window.showToast(data.error || 'Failed to fetch welfare hospitals');
+            }
+        } catch (error) {
+            window.showToast('Network error. Please try again.');
+            console.error('Error:', error);
+        } finally {
+            hideLoading();
         }
-    } catch (error) {
-        showError('Network error. Please try again.');
-        console.error('Error:', error);
-    } finally {
-        hideLoading();
-    }
-});
+    });
+}
 
 // Home Remedies Form Handler
-remediesForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const condition = document.getElementById('condition-input').value.trim();
-    
-    if (!condition) {
-        showError('Please enter a condition');
-        return;
-    }
-    
-    try {
-        showLoading();
+if (remediesForm) {
+    remediesForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
         
-        const response = await fetch(`/api/home-remedies/${encodeURIComponent(condition)}`);
-        const data = await response.json();
+        const rawCondition = document.getElementById('condition-input').value;
+        const condition = escapeHtml(rawCondition).trim();
         
-        if (response.ok) {
-            displayRemediesResults(data);
-        } else {
-            showError(data.error || 'Failed to fetch home remedies');
+        if (!condition) {
+            window.showToast('Please enter a condition');
+            return;
         }
-    } catch (error) {
-        showError('Network error. Please try again.');
-        console.error('Error:', error);
-    } finally {
-        hideLoading();
-    }
-});
+        
+        try {
+            showLoading();
+            
+            const response = await fetch(`/api/home-remedies/${encodeURIComponent(condition)}`);
+            const data = await response.json();
+            
+            if (response.ok) {
+                window.showToast('Remedies found', 'success');
+                displayRemediesResults(data);
+            } else {
+                window.showToast(data.error || 'Failed to fetch home remedies');
+            }
+        } catch (error) {
+            window.showToast('Network error. Please try again.');
+            console.error('Error:', error);
+        } finally {
+            hideLoading();
+        }
+    });
+}
 
 // Medication Reminder Form Handler
-reminderForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const phoneNumber = document.getElementById('phone-number').value.trim();
-    const medicationName = document.getElementById('medication-name').value.trim();
-    const dosage = document.getElementById('dosage').value.trim();
-    const frequency = document.getElementById('frequency').value;
-    const times = document.getElementById('reminder-times').value.trim();
-    
-    if (!phoneNumber || !medicationName || !dosage || !frequency || !times) {
-        showError('Please fill in all fields');
-        return;
-    }
-    
-    try {
-        showLoading();
+if (reminderForm) {
+    reminderForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
         
-        const response = await fetch('/api/set-medication-reminder', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                phoneNumber,
-                medicationName,
-                dosage,
-                frequency,
-                times: times.split(',').map(t => t.trim())
-            })
-        });
+        const phoneNumber = escapeHtml(document.getElementById('phone-number').value).trim();
+        const medicationName = escapeHtml(document.getElementById('medication-name').value).trim();
+        const dosage = escapeHtml(document.getElementById('dosage').value).trim();
+        const frequency = escapeHtml(document.getElementById('frequency').value);
+        const rawTimes = document.getElementById('reminder-times').value;
+        const times = escapeHtml(rawTimes).split(',').map(t => t.trim());
         
-        const data = await response.json();
-        
-        if (response.ok) {
-            displayReminderResults(data);
-        } else {
-            showError(data.error || 'Failed to set medication reminder');
+        if (!phoneNumber || !medicationName || !dosage || !frequency || !rawTimes) {
+            window.showToast('Please fill in all fields');
+            return;
         }
-    } catch (error) {
-        showError('Network error. Please try again.');
-        console.error('Error:', error);
-    } finally {
-        hideLoading();
-    }
-});
+        
+        try {
+            showLoading();
+            
+            const response = await fetch('/api/set-medication-reminder', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    phoneNumber,
+                    medicationName,
+                    dosage,
+                    frequency,
+                    times
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                window.showToast('Reminder set successfully', 'success');
+                displayReminderResults(data);
+            } else {
+                window.showToast(data.error || 'Failed to set medication reminder');
+            }
+        } catch (error) {
+            window.showToast('Network error. Please try again.');
+            console.error('Error:', error);
+        } finally {
+            hideLoading();
+        }
+    });
+}
 
 // Find Doctor Form Handler
-doctorForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const specialty = document.getElementById('specialty').value;
-    const city = document.getElementById('doctor-city').value;
-    
-    if (!specialty || !city) {
-        showError('Please select both specialty and city');
-        return;
-    }
-    
-    try {
-        showLoading();
+if (doctorForm) {
+    doctorForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
         
-        const response = await fetch(`/api/find-specialist/${encodeURIComponent(specialty)}?city=${encodeURIComponent(city)}`);
-        const data = await response.json();
+        const specialty = escapeHtml(document.getElementById('specialty').value);
+        const city = escapeHtml(document.getElementById('doctor-city').value);
         
-        if (response.ok) {
-            displayDoctorResults(data);
-        } else {
-            showError(data.error || 'Failed to find specialists');
+        if (!specialty || !city) {
+            window.showToast('Please select both specialty and city');
+            return;
         }
-    } catch (error) {
-        showError('Network error. Please try again.');
-        console.error('Error:', error);
-    } finally {
-        hideLoading();
-    }
-});
+        
+        try {
+            showLoading();
+            
+            const response = await fetch(`/api/find-specialist/${encodeURIComponent(specialty)}?city=${encodeURIComponent(city)}`);
+            const data = await response.json();
+            
+            if (response.ok) {
+                window.showToast('Specialists found', 'success');
+                displayDoctorResults(data);
+            } else {
+                window.showToast(data.error || 'Failed to find specialists');
+            }
+        } catch (error) {
+            window.showToast('Network error. Please try again.');
+            console.error('Error:', error);
+        } finally {
+            hideLoading();
+        }
+    });
+}
 
 // Display Functions for New Features
 
@@ -380,19 +463,20 @@ function displayFollowUpQuestions(questions) {
 }
 
 // Save Triage Answer
-function saveTriageAnswer(questionId, answer) {
+window.saveTriageAnswer = function(questionId, answer) {
     triageAnswers[questionId] = answer;
 }
 
 // Submit Triage Answers
-async function submitTriageAnswers() {
-    const symptoms = document.getElementById('smart-symptoms').value
+window.submitTriageAnswers = async function() {
+    const rawSymptoms = document.getElementById('smart-symptoms').value;
+    const symptoms = escapeHtml(rawSymptoms)
         .split(',')
         .map(s => s.trim())
         .filter(s => s.length > 0);
     
-    const duration = document.getElementById('smart-duration').value;
-    const severity = document.getElementById('smart-severity').value;
+    const duration = escapeHtml(document.getElementById('smart-duration').value);
+    const severity = escapeHtml(document.getElementById('smart-severity').value);
     
     try {
         showLoading();
@@ -416,10 +500,10 @@ async function submitTriageAnswers() {
             followupQuestions.style.display = 'none';
             displayFinalTriageResults(data);
         } else {
-            showError(data.error || 'An error occurred during triage');
+            window.showToast(data.error || 'An error occurred during triage');
         }
     } catch (error) {
-        showError('Network error. Please try again.');
+        window.showToast('Network error. Please try again.');
         console.error('Error:', error);
     } finally {
         hideLoading();
@@ -685,32 +769,12 @@ function hideLoading() {
 }
 
 // Error Display
-function showError(message) {
-    // Create error element
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'emergency-warning';
-    errorDiv.innerHTML = `
-        <strong>Error:</strong> ${message}
-        <button onclick="this.parentElement.remove()" style="float: right; background: none; border: none; color: inherit; cursor: pointer; font-size: 1.2rem;">×</button>
-    `;
-    
-    // Insert at the top of the main content
-    const main = document.querySelector('.main');
-    main.insertBefore(errorDiv, main.firstChild);
-    
-    // Auto-remove after 5 seconds
-    setTimeout(() => {
-        if (errorDiv.parentElement) {
-            errorDiv.remove();
-        }
-    }, 5000);
-    
-    // Scroll to top to show error
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+window.showError = function(message) {
+    window.showToast(message, 'error');
 }
 
 // Utility Functions
-function showDisclaimer() {
+window.showDisclaimer = function() {
     const disclaimerText = `
         MEDICAL DISCLAIMER
         
@@ -729,7 +793,7 @@ function showDisclaimer() {
     alert(disclaimerText);
 }
 
-function showEmergencyInfo() {
+window.showEmergencyInfo = function() {
     const emergencyText = `
         ہنگامی معلومات (EMERGENCY INFORMATION)
         
