@@ -73,6 +73,7 @@ class MedicalBrain {
             // Home Care Symptoms (Green Flags)
             homeCare: {
                 'mild headache': {
+                    synonyms: ['sir dard', 'sar dard', 'head aches', 'migraine', 'head hurting'],
                     urgency: 'HOME_CARE',
                     possibleConditions: ['Tension Headache', 'Mild Migraine', 'Dehydration', 'Eye Strain'],
                     followUpQuestions: [
@@ -80,29 +81,51 @@ class MedicalBrain {
                         'کیا آپ کم سونے جا رہے ہیں؟',
                         'کیا آپ کمپیوٹر یا موبائل پر زیادہ وقت گزار رہے ہیں؟'
                     ],
-                    remedies: [
-                        'پانی کی مقدار بڑھائیں',
-                        'آرام کریں اور آنکھیں بند کریں',
-                        'ہلکے massage کریں'
-                    ],
-                    action: 'گھریلو دیکھ بھال اور نگرانی',
-                    urduAction: 'گھریلو دیکھ بھال اور نگرانی'
+                    action: 'پانی پیئیں اور آرام کریں۔ (Rest and hydrate)',
+                    urduAction: 'پانی پیئیں اور آرام کریں۔'
                 },
                 'mild cough': {
+                    synonyms: ['khansi', 'coughing', 'throat issue', 'gala kharab'],
                     urgency: 'HOME_CARE',
                     possibleConditions: ['Common Cold', 'Allergies', 'Mild Bronchitis'],
                     followUpQuestions: [
                         'کیا کھانسی خشک ہے یا بلغم والی؟',
-                        'کیا آپ کو گلے میں خراش محسوس ہو رہی ہے؟',
-                        'کیا آپ کو بخار بھی ہے؟'
+                        'کیا آپ کو گلے میں خراش ہے؟'
                     ],
-                    remedies: [
-                        'شہد اور ادرک کا استعمال',
-                        'گرم نمک پانی سے گارگل',
-                        'بھاپ لینے کا طریقہ'
+                    action: 'شہد اور ادرک کا استعمال کریں، گرم پانی پیئیں۔ (Use honey/ginger, drink warm water)',
+                    urduAction: 'شہد اور ادرک کا استعمال کریں، گرم پانی پیئیں۔'
+                },
+                'constipation': {
+                    synonyms: ['kabaz', 'hard stool', 'qabz', 'stomach tight', 'bowel issue', 'cant poop'],
+                    urgency: 'HOME_CARE',
+                    possibleConditions: ['Dietary Constipation', 'Dehydration', 'Irritable Bowel Syndrome (IBS)'],
+                    followUpQuestions: [
+                        'کیا آپ پانی کم پی رہے ہیں؟',
+                        'کیا آپ کی خوراک میں فائبر شامل ہے؟'
                     ],
-                    action: 'گھریلو دیکھ بھال اور نگرانی',
-                    urduAction: 'گھریلو دیکھ بھال اور نگرانی'
+                    action: 'فائبر والی خوراک (جیسے سبزیاں، پھل) کھائیں اور پانی کا استعمال بڑھائیں۔ (Increase fiber and water intake)',
+                    urduAction: 'فائبر والی خوراک کھائیں اور پانی زیادہ پیئیں۔'
+                },
+                'insomnia': {
+                    synonyms: ['insonmia', 'sleep issue', 'cant sleep', 'neend nahi', 'neend nai', 'sleepless'],
+                    urgency: 'HOME_CARE',
+                    possibleConditions: ['Stress/Anxiety', 'Primary Insomnia', 'Poor Sleep Hygiene'],
+                    followUpQuestions: [
+                        'کیا آپ رات کو دیر تک سکرین استعمال کرتے ہیں؟',
+                        'کیا آپ کو کسی قسم کا تناؤ (stress) ہے؟'
+                    ],
+                    action: 'سونے کا مقررہ وقت بنائیں، رات کو کیفین اور موبائل فون سے پرہیز کریں۔ (Establish sleep routine, avoid screens)',
+                    urduAction: 'سونے کا وقت مقرر کریں، سکرین سے دور رہیں۔'
+                },
+                'fatigue': {
+                    synonyms: ['weakness', 'thakan', 'kamzori', 'tired', 'exhausted', 'energy low'],
+                    urgency: 'HOME_CARE',
+                    possibleConditions: ['Anemia', 'Vitamin D/B12 Deficiency', 'Overwork'],
+                    followUpQuestions: [
+                        'کیا آپ کو روزمرہ کے کام کرنے میں دشواری ہو رہی ہے؟'
+                    ],
+                    action: 'مناسب نیند لیں اور متوازن غذا کھائیں۔ (Get adequate sleep and eat balanced diet)',
+                    urduAction: 'مناسب نیند لیں اور متوازن غذا کھائیں۔'
                 }
             }
         };
@@ -310,99 +333,82 @@ class MedicalBrain {
         };
     }
 
-    // SiliconFlow API Integration for DeepSeek-V3.2
-    async callSiliconFlowAPI(symptoms, userContext = {}) {
-        const apiKey = process.env.SILICONFLOW_API_KEY;
-        if (!apiKey) {
-            console.warn('SiliconFlow API key not found');
-            return null;
-        }
-
+    // Call Keyless Free Generative AI (Pollinations AI)
+    async callGenerativeAI(symptoms, userContext) {
         const systemPrompt = `You are a professional medical assistant in Pakistan. Speak in a mix of English and Urdu.
-        You MUST structure your ENTIRE response EXACTLY using the following sections and bullet points format. Do not use any other formatting.
+        You MUST provide an extremely detailed, thoughtful, and analytical medical assessment of these exact symptoms.
+        You MUST structure your ENTIRE response EXACTLY using the following sections and bullet points format to ensure mapping.
         
         URGENCY:
         - [State either EMERGENCY, URGENT, or HOME_CARE]
         
         CONDITIONS:
-        - [Condition 1]
-        - [Condition 2]
+        - [Detailed Condition 1 with explanation]
+        - [Detailed Condition 2 with explanation]
         
         RECOMMENDATIONS:
-        - [Recommendation 1]
-        - [Recommendation 2]
+        - [Detailed analytical recommendation 1]
+        - [Detailed analytical recommendation 2]
         
         QUESTIONS:
-        - [Question 1]?`;
+        - [Specific follow-up question 1]?`;
 
         const userPrompt = `Patient symptoms: ${symptoms.join(', ')}
         Duration: ${userContext.duration || 'Not specified'}
         Severity: ${userContext.severity || 'Not specified'}`;
 
-        const models = [
-            'deepseek-ai/DeepSeek-V3',
-            'Qwen/Qwen2.5-7B-Instruct', // Free tier fallback
-            'THUDM/glm-4-9b-chat'       // Secondary free tier fallback
-        ];
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout for deep generation
 
-        for (const model of models) {
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 12000);
+        try {
+            // Pollinations.ai provides unrestricted, free, keyless access to OpenAI/Llama models
+            const response = await fetch('https://text.pollinations.ai/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userPrompt }
+                    ],
+                    model: 'openai' // Routes to the best available intelligent model
+                }),
+                signal: controller.signal
+            });
 
-            try {
-                const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model: model,
-                        messages: [
-                            { role: 'system', content: systemPrompt },
-                            { role: 'user', content: userPrompt }
-                        ],
-                        temperature: 0.3,
-                        max_tokens: 800
-                    }),
-                    signal: controller.signal
-                });
+            clearTimeout(timeout);
 
-                clearTimeout(timeout);
-
-                if (response.ok) {
-                    const data = await response.json();
-                    return data.choices[0].message.content;
-                } else {
-                    console.warn(`Model ${model} failed with status: ${response.status}`);
-                }
-            } catch (error) {
-                clearTimeout(timeout);
-                console.error(`Error with model ${model}:`, error.message);
+            if (response.ok) {
+                return await response.text();
+            } else {
+                console.warn(`Generative AI failed with status: ${response.status}`);
             }
+        } catch (error) {
+            clearTimeout(timeout);
+            console.error(`Error with generative AI model:`, error.message);
         }
         
-        console.error('All SiliconFlow AI models failed to respond.');
-        return null; // Triggers offline rule-based fallback
+        return null; // Triggers offline rule-based fallback if it fails
     }
 
     // Enhanced Symptom Analysis with AI Integration
     async analyzeSymptomsWithAI(symptoms, userContext = {}) {
         try {
-            // First try to get AI analysis
-            const aiAnalysis = await this.callSiliconFlowAPI(symptoms, userContext);
+            // Get detailed AI generation utilizing free keyless gateway
+            const aiAnalysis = await this.callGenerativeAI(symptoms, userContext);
             
             if (aiAnalysis) {
                 // Parse AI response and enhance with local context
                 return this.parseAIResponse(aiAnalysis, symptoms, userContext);
             }
 
-            // Fallback to rule-based analysis
+            // Fallback to robust offline analysis
             return this.analyzeSymptoms(symptoms, userContext);
 
         } catch (error) {
-            console.error('Error in AI symptom analysis:', error);
-            // Fallback to rule-based analysis
+            console.error('Error in AI symptom generation:', error);
+            // Fallback to robust offline analysis
             return this.analyzeSymptoms(symptoms, userContext);
         }
     }
