@@ -323,29 +323,31 @@ class MedicalBrain {
             return null;
         }
 
-        const systemPrompt = `You are a professional medical assistant in Pakistan. Speak in a mix of English and Urdu if the user uses Urdu. 
-        Provide accurate medical information while emphasizing that this is not a substitute for professional medical care.
-        Always include emergency warnings for serious symptoms and advise calling 1122 for emergencies.
-        Consider Pakistani context including local diseases, cultural practices, and available healthcare facilities.`;
+        const systemPrompt = `You are a professional medical assistant in Pakistan. Speak in a mix of English and Urdu.
+        You MUST structure your ENTIRE response EXACTLY using the following sections and bullet points format. Do not use any other formatting.
+        
+        URGENCY:
+        - [State either EMERGENCY, URGENT, or HOME_CARE]
+        
+        CONDITIONS:
+        - [Condition 1]
+        - [Condition 2]
+        
+        RECOMMENDATIONS:
+        - [Recommendation 1]
+        - [Recommendation 2]
+        
+        QUESTIONS:
+        - [Question 1]?`;
 
         const userPrompt = `Patient symptoms: ${symptoms.join(', ')}
         Duration: ${userContext.duration || 'Not specified'}
-        Severity: ${userContext.severity || 'Not specified'}
-        Age: ${userContext.age || 'Not specified'}
-        Gender: ${userContext.gender || 'Not specified'}
-        Region: ${userContext.region || 'Not specified'}
-
-        Please analyze these symptoms and provide:
-        1. Possible conditions (most likely first)
-        2. Urgency level (Emergency/Urgent/Home Care)
-        3. Follow-up questions to better understand symptoms
-        4. Immediate recommendations
-        5. When to seek emergency care (1122)`;
+        Severity: ${userContext.severity || 'Not specified'}`;
 
         const controller = new AbortController();
         const timeout = setTimeout(() => {
             controller.abort();
-        }, 10000);
+        }, 12000); // Increased timeout to 12s for DeepSeek V3
 
         try {
             const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
@@ -355,19 +357,13 @@ class MedicalBrain {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: 'deepseek-ai/DeepSeek-V3.2',
+                    model: 'deepseek-ai/DeepSeek-V3',
                     messages: [
-                        {
-                            role: 'system',
-                            content: systemPrompt
-                        },
-                        {
-                            role: 'user',
-                            content: userPrompt
-                        }
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userPrompt }
                     ],
                     temperature: 0.3,
-                    max_tokens: 1000
+                    max_tokens: 800
                 }),
                 signal: controller.signal
             });
@@ -427,38 +423,57 @@ class MedicalBrain {
             let currentSection = null;
             
             lines.forEach(line => {
-                const lowerLine = line.toLowerCase();
+                const cleanLine = line.trim();
+                const lowerLine = cleanLine.toLowerCase();
                 
-                if (lowerLine.includes('emergency') || lowerLine.includes('immediate')) {
-                    analysis.urgency = 'EMERGENCY';
-                    analysis.emergencyWarning = {
-                        level: 'high',
-                        message: 'فوری طور پر ایمرجنسی روم جائیں یا 1122 پر کال کریں',
-                        action: 'Go to Emergency Room or call 1122 immediately'
-                    };
-                } else if (lowerLine.includes('urgent')) {
-                    analysis.urgency = 'URGENT';
-                }
-
-                if (lowerLine.includes('possible conditions') || lowerLine.includes('conditions')) {
+                // Identify sections
+                if (lowerLine.includes('urgency:')) {
+                    currentSection = 'urgency';
+                    return;
+                } else if (lowerLine.includes('conditions:')) {
                     currentSection = 'conditions';
-                } else if (lowerLine.includes('follow up') || lowerLine.includes('questions')) {
-                    currentSection = 'questions';
-                } else if (lowerLine.includes('recommendations') || lowerLine.includes('advice')) {
+                    return;
+                } else if (lowerLine.includes('recommendations:')) {
                     currentSection = 'recommendations';
+                    return;
+                } else if (lowerLine.includes('questions:')) {
+                    currentSection = 'questions';
+                    return;
                 }
 
-                if (currentSection === 'conditions' && line.includes('-')) {
-                    const condition = line.replace(/.*-\s*/, '').trim();
-                    if (condition) analysis.possibleConditions.push(condition);
-                } else if (currentSection === 'questions' && line.includes('?')) {
-                    const question = line.replace(/^\d+\.\s*/, '').trim();
-                    if (question) analysis.followUpQuestions.push(question);
-                } else if (currentSection === 'recommendations' && line.includes('-')) {
-                    const recommendation = line.replace(/.*-\s*/, '').trim();
-                    if (recommendation) analysis.recommendations.push(recommendation);
+                // Process content based on current section
+                if (cleanLine.startsWith('-') || cleanLine.startsWith('*')) {
+                    const content = cleanLine.substring(1).trim();
+                    if (!content) return;
+
+                    if (currentSection === 'urgency') {
+                        if (content.toUpperCase().includes('EMERGENCY')) {
+                            analysis.urgency = 'EMERGENCY';
+                            analysis.emergencyWarning = {
+                                level: 'high',
+                                message: 'فوری طور پر ایمرجنسی روم جائیں یا 1122 پر کال کریں',
+                                action: 'Go to Emergency Room or call 1122 immediately'
+                            };
+                        } else if (content.toUpperCase().includes('URGENT')) {
+                            analysis.urgency = 'URGENT';
+                        } else {
+                            analysis.urgency = 'HOME_CARE';
+                        }
+                    } else if (currentSection === 'conditions') {
+                        analysis.possibleConditions.push(content);
+                    } else if (currentSection === 'recommendations') {
+                        analysis.recommendations.push(content);
+                    } else if (currentSection === 'questions') {
+                        analysis.followUpQuestions.push(content);
+                    }
                 }
             });
+
+            // If AI failed to provide possible conditions, add a generic fallback so the UI renders it
+            if (analysis.possibleConditions.length === 0) {
+                analysis.possibleConditions.push("General Symptoms (عام علامات)");
+                analysis.recommendations.push("براہ کرم ڈاکٹر سے مشورہ کریں اگر علامات برقرار رہیں (Consult a doctor if symptoms persist)");
+            }
 
             // Enhance with Pakistani context
             return this.applyPakistaniContext(analysis, userContext);
