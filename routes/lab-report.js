@@ -4,7 +4,7 @@ const path = require('path');
 const Tesseract = require('tesseract.js');
 const fs = require('fs');
 
-const uploadsDir = path.join(__dirname, '../uploads');
+const uploadsDir = process.env.VERCEL ? '/tmp/uploads' : path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }

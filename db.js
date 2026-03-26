@@ -2,7 +2,9 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const logger = require('./logger');
 
-const db = new sqlite3.Database(path.join(__dirname, 'tabeeb.db'), (err) => {
+const dbPath = process.env.VERCEL ? '/tmp/tabeeb.db' : path.join(__dirname, 'tabeeb.db');
+
+const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         logger.error('Error connecting to SQLite database', err);
     } else {

@@ -2,202 +2,147 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
+const cron = require('node-cron');
+const twilio = require('twilio');
 require('dotenv').config();
 
-// Import TABEEB AI Medical Brain
+// Custom modules
+const logger = require('../logger');
+const db = require('../db');
 const MedicalBrain = require('../src/medical-brain');
+
+const app = express();
 
 // Initialize Medical Brain
 const medicalBrain = new MedicalBrain();
 
-// Create Express app
-const app = express();
-
-// Middleware
-app.use(cors());
+// Security middleware
 app.use(helmet());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(cors());
 
-// Rate limiting
+// Rate limit
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: 'Too many requests from this IP'
 });
-app.use(limiter);
+app.use('/api/', limiter);
 
-// Configure multer for memory storage (Vercel doesn't allow file system)
-const upload = multer({ storage: multer.memoryStorage() });
+// Body parsing
+app.use(express.json());
 
-// Smart Symptom Triage with TABEEB AI Medical Brain
-app.post('/api/smart-triage', async (req, res) => {
-    try {
-        const { symptoms, duration, severity, answers = {}, age, region, gender } = req.body;
-        
-        if (!symptoms || symptoms.length === 0) {
-            return res.status(400).json({ 
-                error: 'Symptoms are required',
-                disclaimer: medicalBrain.getMedicalDisclaimer()
-            });
+// Global Medical Disclaimer Middleware
+app.use((req, res, next) => {
+  res.setHeader('X-Medical-Disclaimer', 'This is not medical advice. Always consult a healthcare professional.');
+  next();
+});
+
+// Import and use routes
+app.use('/api', require('../routes/symptoms')(medicalBrain, db, logger));
+app.use('/api', require('../routes/lab-report')(medicalBrain, db, logger));
+app.use('/api', require('../routes/pharmacy')(medicalBrain, db, logger));
+app.use('/api', require('../routes/welfare')(medicalBrain, db, logger));
+app.use('/api', require('../routes/remedies')(medicalBrain, db, logger));
+app.use('/api', require('../routes/reminder')(medicalBrain, db, logger));
+app.use('/api', require('../routes/doctor')(medicalBrain, db, logger));
+
+// Basic Medical Information lookup
+app.get('/api/medical-info/:condition', async (req, res) => {
+  try {
+    const condition = req.params.condition.toLowerCase();
+    const medicalDatabase = {
+        'migraine': {
+            description: 'A neurological condition characterized by intense, debilitating headaches.',
+            symptoms: ['Severe headache', 'Nausea', 'Sensitivity to light and sound', 'Visual disturbances'],
+            treatments: ['Pain relievers', 'Triptans', 'Preventive medications', 'Lifestyle changes'],
+            whenToSeeDoctor: 'If headaches are severe, frequent, or accompanied by other symptoms'
+        },
+        'flu': {
+            description: 'A contagious respiratory illness caused by influenza viruses.',
+            symptoms: ['Fever', 'Cough', 'Sore throat', 'Body aches', 'Fatigue'],
+            treatments: ['Rest', 'Fluids', 'Antiviral medications', 'Pain relievers'],
+            whenToSeeDoctor: 'If symptoms are severe or if you are in a high-risk group'
+        },
+        'common cold': {
+            description: 'A mild viral infection of the nose and throat.',
+            symptoms: ['Runny nose', 'Sore throat', 'Cough', 'Congestion', 'Mild fatigue'],
+            treatments: ['Rest', 'Fluids', 'Over-the-counter cold medications'],
+            whenToSeeDoctor: 'If symptoms last more than 10 days or worsen'
+        }
+    };
+    
+    const info = medicalDatabase[condition] || {
+        description: 'Information not available in our database.',
+        symptoms: [],
+        treatments: [],
+        whenToSeeDoctor: 'Consult a healthcare professional for accurate information'
+    };
+    
+    res.json({
+      ...info,
+      disclaimer: 'This information is for educational purposes only. Always consult a healthcare professional.'
+    });
+  } catch (error) {
+    logger.error('Error fetching medical info:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      disclaimer: 'This information is for educational purposes only. Always consult a healthcare professional.'
+    });
+  }
+});
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  logger.error(err.stack);
+  res.status(500).json({
+    error: 'Internal server error',
+    disclaimer: 'This is not medical advice. Always consult a healthcare professional.'
+  });
+});
+
+// Twilio Setup and Cron Job for Real WhatsApp Reminders
+// Note: Vercel serverless functions usually hibernate, making node-cron unreliable.
+// For true serverless cron, Vercel Cron Jobs (vercel.json "crons") hitting an API endpoint is standard.
+// For this phase, we keep the internal node-cron which works in local dev or persistent hosts.
+const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN 
+  ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+  : null;
+
+cron.schedule('* * * * *', () => {
+    logger.info('Running medication reminder check...');
+    db.all(`SELECT * FROM medication_reminders WHERE active = 1`, [], async (err, rows) => {
+        if (err) {
+            logger.error('Failed to fetch reminders:', err);
+            return;
         }
 
-        // Use Medical Brain for enhanced AI analysis
-        const analysis = await medicalBrain.analyzeSymptomsWithAI(symptoms, {
-            severity,
-            duration,
-            age,
-            region,
-            gender,
-            answers
-        });
-        
-        res.json({
-            ...analysis,
-            disclaimer: medicalBrain.getMedicalDisclaimer()
-        });
-    } catch (error) {
-        console.error('Error in smart triage:', error);
-        res.status(500).json({ 
-            error: 'Internal server error',
-            disclaimer: medicalBrain.getMedicalDisclaimer()
-        });
-    }
-});
+        const now = new Date();
+        const currentTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }).replace(/ AM| PM/i, (match) => match.toUpperCase());
 
-// Lab Report Interpreter using TABEEB AI Medical Brain
-app.post('/api/interpret-lab-report', upload.single('labReport'), async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'Lab report image is required' });
+        for (const reminder of rows) {
+            try {
+                const times = JSON.parse(reminder.times);
+                if (times.some(t => t.toUpperCase().includes(currentTime) || currentTime.includes(t.toUpperCase()))) {
+                    const messageBody = `*TABEEB AI Reminder*\nIt's time to take your medication:\n\n💊 Medicine: ${reminder.medication}\n🔢 Dosage: ${reminder.dosage}\n\nStay healthy!`;
+                    
+                    if (twilioClient) {
+                        await twilioClient.messages.create({
+                            body: messageBody,
+                            from: process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886',
+                            to: `whatsapp:${reminder.phone_number}`
+                        });
+                        logger.info(`WhatsApp reminder sent to ${reminder.phone_number} for ${reminder.medication}`);
+                    } else {
+                        logger.info(`[SIMULATED] WhatsApp reminder sent to ${reminder.phone_number} for ${reminder.medication} - No Twilio config found.`);
+                    }
+                }
+            } catch (error) {
+                logger.error(`Error processing reminder to ${reminder.phone_number}:`, error);
+            }
         }
-
-        // Simulate OCR extraction (in production, would use Tesseract.js)
-        const extractedData = {
-            'Hemoglobin': '12.5 g/dL',
-            'WBC': '8000/μL',
-            'Platelets': '250,000/μL',
-            'Blood Sugar (Fasting)': '110 mg/dL',
-            'Cholesterol': '220 mg/dL',
-            'Triglycerides': '180 mg/dL'
-        };
-
-        // Use Medical Brain for analysis
-        const interpretation = medicalBrain.analyzeLabReport(extractedData);
-        
-        res.json({
-            ...interpretation,
-            disclaimer: medicalBrain.getMedicalDisclaimer()
-        });
-    } catch (error) {
-        console.error('Error interpreting lab report:', error);
-        res.status(500).json({ 
-            error: 'Failed to interpret lab report',
-            disclaimer: medicalBrain.getMedicalDisclaimer()
-        });
-    }
+    });
 });
 
-// Pharmacy Price Comparison
-app.get('/api/pharmacy-prices/:medicine', async (req, res) => {
-    try {
-        const medicine = req.params.medicine;
-        const prices = medicalBrain.getPharmacyPrices(medicine);
-        
-        res.json({
-            medicine,
-            prices,
-            disclaimer: medicalBrain.getMedicalDisclaimer()
-        });
-    } catch (error) {
-        console.error('Error fetching pharmacy prices:', error);
-        res.status(500).json({ error: 'Failed to fetch pharmacy prices' });
-    }
-});
-
-// Welfare Hospitals Finder
-app.get('/api/welfare-hospitals/:city', async (req, res) => {
-    try {
-        const city = req.params.city;
-        const hospitals = medicalBrain.getWelfareHospitals(city);
-        
-        res.json({
-            city,
-            hospitals,
-            disclaimer: 'Please verify hospital services and availability before visiting.'
-        });
-    } catch (error) {
-        console.error('Error fetching welfare hospitals:', error);
-        res.status(500).json({ error: 'Failed to fetch hospital information' });
-    }
-});
-
-// Gharelu Totkay (Home Remedies) using TABEEB AI Medical Brain
-app.get('/api/home-remedies/:condition', async (req, res) => {
-    try {
-        const condition = req.params.condition;
-        
-        // Use Medical Brain to get culturally appropriate remedies
-        const remedies = medicalBrain.getHomeRemedies(condition);
-        
-        res.json({
-            condition,
-            remedies,
-            disclaimer: medicalBrain.getMedicalDisclaimer()
-        });
-    } catch (error) {
-        console.error('Error fetching home remedies:', error);
-        res.status(500).json({ 
-            error: 'Failed to fetch remedies',
-            disclaimer: medicalBrain.getMedicalDisclaimer()
-        });
-    }
-});
-
-// WhatsApp Medication Reminder
-app.post('/api/set-medication-reminder', async (req, res) => {
-    try {
-        const { phoneNumber, medicationName, dosage, frequency, times } = req.body;
-        
-        // Validate phone number (Pakistani format)
-        if (!phoneNumber || !phoneNumber.match(/^(\+92|0)?3[0-9]{9}$/)) {
-            return res.status(400).json({ error: 'Invalid Pakistani phone number format' });
-        }
-
-        // Use Medical Brain to set reminder
-        const reminder = medicalBrain.setMedicationReminder(phoneNumber, medicationName, dosage, frequency, times);
-        
-        res.json({
-            ...reminder,
-            disclaimer: 'This is a demo. In production, actual WhatsApp messages would be sent.'
-        });
-    } catch (error) {
-        console.error('Error setting medication reminder:', error);
-        res.status(500).json({ error: 'Failed to set medication reminder' });
-    }
-});
-
-// Find a Specialist (Sehat Connect)
-app.get('/api/find-specialist/:specialty', async (req, res) => {
-    try {
-        const specialty = req.params.specialty;
-        const city = req.query.city || 'rawalpindi';
-        
-        // Use Medical Brain to find specialists
-        const specialists = medicalBrain.findSpecialists(specialty, city);
-        
-        res.json({
-            specialty,
-            city,
-            specialists,
-            disclaimer: 'Please verify doctor credentials and availability before booking.'
-        });
-    } catch (error) {
-        console.error('Error finding specialists:', error);
-        res.status(500).json({ error: 'Failed to find specialists' });
-    }
-});
-
-// Export for Vercel
 module.exports = app;

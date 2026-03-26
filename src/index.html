@@ -5,99 +5,75 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TABEEB AI - Pakistan's First Medical AI Assistant</title>
     <meta name="description" content="TABEEB AI - Pakistan's first local AI-powered medical assistant and symptom checker">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 <body>
     <header class="header">
-        <div class="container">
-            <div class="header-content">
+        <div class="container" style="width: 100%; max-width: 1200px; margin: 0 auto;">
+            <div class="header-content" style="display: flex; justify-content: space-between; width: 100%;">
                 <div class="logo">
-                    <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-                    </svg>
+                    <i class="ph-fill ph-heartbeat" style="font-size: 2.5rem; color: #2dd4bf;"></i>
                     <h1>TABEEB AI</h1>
                 </div>
-                <div class="header-actions">
-                    <div class="emergency-notice">
-                        <span class="emergency-icon">🚨</span>
-                        <span>ہنگامی صورت میں 1122 پر کال کریں (For emergencies, call 1122)</span>
-                    </div>
-                    <div class="language-toggle">
-                        <button id="langToggle" class="lang-btn">
-                            <span class="lang-icon">🌐</span>
-                            <span class="lang-text">English</span>
-                        </button>
-                    </div>
+                <div class="header-controls">
+                    <button id="emergencyBtn" class="emergency-btn">
+                        <i class="ph-fill ph-warning-circle"></i>
+                        Emergency 1122
+                    </button>
+                    <button id="langToggle" class="lang-toggle">
+                        <i class="ph ph-translate" style="font-size: 1.25rem;"></i>
+                        اردو / English
+                    </button>
                 </div>
             </div>
         </div>
     </header>
 
     <main class="main">
-        <div class="container">
-            <!-- Medical Disclaimer -->
-            <section class="disclaimer">
-                <div class="disclaimer-content">
-                    <strong>⚠️ طبی انتباہ (Medical Disclaimer):</strong> 
-                    یہ ایپلیکیشن پیشہ ورانہ طبی مشورے کا متبادل نہیں ہے۔ ہمیشہ اہل صحت کی دیکھ بھال سے مشورہ کریں۔
-                    (This application is NOT a substitute for professional medical advice. Always consult qualified healthcare providers.)
+        <div class="main-container">
+            <div class="sidebar">
+                <div class="tabs">
+                    <button class="tab-button active" data-tab="smart-triage">
+                        <i class="ph ph-stethoscope"></i>
+                        ہوشیار علامات کی جانچ (Smart Triage)
+                    </button>
+                    <button class="tab-button" data-tab="lab-report">
+                        <i class="ph ph-file-pdf"></i>
+                        لیب رپورٹ (Lab Report)
+                    </button>
+                    <button class="tab-button" data-tab="pharmacy">
+                        <i class="ph ph-pill"></i>
+                        دوا کی قیمت (Pharmacy)
+                    </button>
+                    <button class="tab-button" data-tab="welfare">
+                        <i class="ph ph-hospital"></i>
+                        ویلفیئر اسپتالیں (Welfare)
+                    </button>
+                    <button class="tab-button" data-tab="home-remedies">
+                        <i class="ph ph-leaf"></i>
+                        گھریلو علاج (Remedies)
+                    </button>
+                    <button class="tab-button" data-tab="medication-reminder">
+                        <i class="ph ph-alarm"></i>
+                        یاد دہانی (Reminders)
+                    </button>
+                    <button class="tab-button" data-tab="find-doctor">
+                        <i class="ph ph-user"></i>
+                        ڈاکٹر تلاش کریں (Doctor)
+                    </button>
                 </div>
-            </section>
-
-            <!-- Navigation Tabs -->
-            <div class="tabs">
-                <button class="tab-button active" data-tab="smart-triage">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 11H3v2h6v-2zm0-4H3v2h6V7zm0 8H3v2h6v-2zm12-8h-6v2h6V7zm0 4h-6v2h6v-2zm0 4h-6v2h6v-2z"/>
-                    </svg>
-                    ہوشیار علامات کی جانچ (Smart Triage)
-                </button>
-                <button class="tab-button" data-tab="lab-report">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14,2 14,8 20,8"/>
-                        <line x1="16" y1="13" x2="8" y2="13"/>
-                        <line x1="16" y1="17" x2="8" y2="17"/>
-                        <polyline points="10,9 9,9 8,9"/>
-                    </svg>
-                    لیب رپورٹ انٹرپریٹر (Lab Report)
-                </button>
-                <button class="tab-button" data-tab="pharmacy">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                        <polyline points="17,21 17,13 7,13 7,21"/>
-                        <polyline points="7,3 7,8 15,8"/>
-                    </svg>
-                    دوا کی قیمت (Pharmacy)
-                </button>
-                <button class="tab-button" data-tab="welfare">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                        <polyline points="9,22 9,12 15,12 15,22"/>
-                    </svg>
-                    ویلفیئر اسپتالیں (Welfare)
-                </button>
-                <button class="tab-button" data-tab="home-remedies">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                        <polyline points="9,22 9,12 15,12 15,22"/>
-                    </svg>
-                    گھریلو علاج (Home Remedies)
-                </button>
-                <button class="tab-button" data-tab="medication-reminder">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"/>
-                        <polyline points="12,6 12,12 16,14"/>
-                    </svg>
-                    دوا کی یاد دہانی (Reminders)
-                </button>
-                <button class="tab-button" data-tab="find-doctor">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-                    </svg>
-                    ڈاکٹر تلاش کریں (Find Doctor)
-                </button>
             </div>
+
+            <div class="content-wrapper">
+                <!-- Medical Disclaimer -->
+                <section class="disclaimer-banner" style="margin-top: 0; margin-bottom: 2rem;">
+                    <i class="ph-fill ph-warning-circle" style="font-size: 1.5rem; color: var(--warning);"></i>
+                    <div>
+                        <strong>طبی انتباہ (Medical Disclaimer):</strong><br>
+                        یہ ایپلیکیشن پیشہ ورانہ طبی مشورے کا متبادل نہیں ہے۔ ہمیشہ اہل صحت کی دیکھ بھال سے مشورہ کریں۔
+                        (This application is NOT a substitute for professional medical advice. Always consult qualified healthcare providers.)
+                    </div>
+                </section>
 
             <!-- Smart Triage Tab -->
             <section id="smart-triage" class="tab-content active">
@@ -398,6 +374,7 @@
                     </div>
                 </div>
             </section>
+        </div>
         </div>
     </main>
 
