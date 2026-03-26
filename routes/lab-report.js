@@ -42,12 +42,27 @@ module.exports = function(medicalBrain, db, logger) {
 
             logger.info(`Received lab report for OCR: ${req.file.path}`);
             
-            // Perform OCR using Tesseract.js
-            const worker = await Tesseract.createWorker('eng');
-            const { data: { text } } = await worker.recognize(req.file.path);
-            await worker.terminate();
+            // Perform OCR using Tesseract.js with Circuit Breaker Timeout
+            let text = '';
+            let worker = null;
+            try {
+                worker = await Tesseract.createWorker('eng');
+                
+                const recognizePromise = worker.recognize(req.file.path).then(res => res.data.text);
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('OCR Timeout Exceeded')), 8000);
+                });
 
-            logger.info('OCR Extraction Complete');
+                text = await Promise.race([recognizePromise, timeoutPromise]);
+                logger.info('OCR Extraction Complete');
+            } catch (ocrError) {
+                logger.warn('OCR Extraction failed or timed out. Proceeding with fallback parsing: ' + ocrError.message);
+                text = ''; // Proceed with blank text to trigger the generic fallback data
+            } finally {
+                if (worker) {
+                    await worker.terminate().catch(e => logger.error('Worker termination warning:', e));
+                }
+            }
 
             // Simplified parsing of extracted text to find common lab values
             const extractedData = {};

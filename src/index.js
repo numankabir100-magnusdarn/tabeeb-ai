@@ -518,19 +518,43 @@ function displayFinalTriageResults(data) {
         'HOME_CARE': '#16a34a'
     };
     
+    // Fallbacks to handle both structured algorithm and AI variations
+    const triageLevel = data.triageLevel || data.urgency || 'HOME_CARE';
+    
+    const action = data.action 
+        || (data.emergencyWarning && data.emergencyWarning.action) 
+        || 'گھر پر آرام کریں (Rest and monitor symptoms)';
+        
+    const explanation = data.explanation 
+        || (data.emergencyWarning && data.emergencyWarning.message) 
+        || 'علامات کی شدت کم ہے (Symptoms are mild)';
+        
+    const disclaimerObj = data.disclaimer || {};
+    const disclaimerText = typeof disclaimerObj === 'string' 
+        ? disclaimerObj 
+        : `${disclaimerObj.urdu || ''} ${disclaimerObj.text ? `(${disclaimerObj.text})` : ''}`;
+    
     const html = `
-        <div class="triage-result" style="border-left: 5px solid ${urgencyColors[data.triageLevel]}; padding: 1rem; margin-bottom: 1rem;">
-            <h4 style="color: ${urgencyColors[data.triageLevel]};">
-                ${data.triageLevel === 'EMERGENCY' ? 'ہنگامی (EMERGENCY)' : 
-                  data.triageLevel === 'URGENT' ? 'فوری (URGENT)' : 'گھریلو دیکھ بھال (HOME CARE)'}
+        <div class="triage-result" style="border-left: 5px solid ${urgencyColors[triageLevel]}; padding: 1rem; margin-bottom: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+            <h4 style="color: ${urgencyColors[triageLevel]}; margin-bottom: 1rem;">
+                ${triageLevel === 'EMERGENCY' ? 'ہنگامی (EMERGENCY)' : 
+                  triageLevel === 'URGENT' ? 'فوری (URGENT)' : 'گھریلو دیکھ بھال (HOME CARE)'}
             </h4>
-            <p><strong>فوری کارروائی (Action):</strong> ${data.action}</p>
-            <p><strong>شرح (Explanation):</strong> ${data.explanation}</p>
-            <p><strong>اہمیت (Urgency):</strong> ${data.urgency}</p>
+            <p style="margin-bottom: 0.5rem;"><strong>فوری کارروائی (Action):</strong> ${action}</p>
+            <p><strong>شرح (Explanation):</strong> ${explanation}</p>
         </div>
         
+        ${data.possibleConditions && data.possibleConditions.length > 0 ? `
+            <div class="analysis-item" style="margin-top: 1.5rem;">
+                <h4>ممکنہ وجوہات (Possible Conditions):</h4>
+                <ul>
+                    ${data.possibleConditions.map(cond => `<li>${cond}</li>`).join('')}
+                </ul>
+            </div>
+        ` : ''}
+
         ${data.recommendations ? `
-            <div class="analysis-item">
+            <div class="analysis-item" style="margin-top: 1.5rem;">
                 <h4>تجاویز (Recommendations):</h4>
                 <ul>
                     ${data.recommendations.map(rec => `<li>${rec}</li>`).join('')}
@@ -538,8 +562,8 @@ function displayFinalTriageResults(data) {
             </div>
         ` : ''}
         
-        <div class="disclaimer-box">
-            <strong>⚠️ Important:</strong> ${data.disclaimer}
+        <div class="disclaimer-box" style="margin-top: 2rem; padding: 1rem; background: rgba(245, 158, 11, 0.1); border-left: 4px solid var(--warning); border-radius: 4px;">
+            <strong>⚠️ Important:</strong> ${disclaimerText}
         </div>
     `;
     
