@@ -344,43 +344,51 @@ class MedicalBrain {
         Duration: ${userContext.duration || 'Not specified'}
         Severity: ${userContext.severity || 'Not specified'}`;
 
-        const controller = new AbortController();
-        const timeout = setTimeout(() => {
-            controller.abort();
-        }, 12000); // Increased timeout to 12s for DeepSeek V3
+        const models = [
+            'deepseek-ai/DeepSeek-V3',
+            'Qwen/Qwen2.5-7B-Instruct', // Free tier fallback
+            'THUDM/glm-4-9b-chat'       // Secondary free tier fallback
+        ];
 
-        try {
-            const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${apiKey}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    model: 'deepseek-ai/DeepSeek-V3',
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: userPrompt }
-                    ],
-                    temperature: 0.3,
-                    max_tokens: 800
-                }),
-                signal: controller.signal
-            });
+        for (const model of models) {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 12000);
 
-            clearTimeout(timeout);
+            try {
+                const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: userPrompt }
+                        ],
+                        temperature: 0.3,
+                        max_tokens: 800
+                    }),
+                    signal: controller.signal
+                });
 
-            if (!response.ok) {
-                throw new Error(`API request failed: ${response.status}`);
+                clearTimeout(timeout);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.choices[0].message.content;
+                } else {
+                    console.warn(`Model ${model} failed with status: ${response.status}`);
+                }
+            } catch (error) {
+                clearTimeout(timeout);
+                console.error(`Error with model ${model}:`, error.message);
             }
-
-            const data = await response.json();
-            return data.choices[0].message.content;
-
-        } catch (error) {
-            console.error('Error calling SiliconFlow API:', error);
-            return null;
         }
+        
+        console.error('All SiliconFlow AI models failed to respond.');
+        return null; // Triggers offline rule-based fallback
     }
 
     // Enhanced Symptom Analysis with AI Integration
@@ -591,6 +599,13 @@ class MedicalBrain {
         // Remove duplicates and prioritize
         analysis.possibleConditions = [...new Set(analysis.possibleConditions)].slice(0, 5);
         analysis.followUpQuestions = [...new Set(analysis.followUpQuestions)].slice(0, 3);
+        
+        // Robust offline fallback rendering if nothing mapped successfully
+        if (analysis.possibleConditions.length === 0) {
+            analysis.possibleConditions.push("General Unknown Symptoms (عام غیر واضح علامات)");
+            analysis.recommendations.push("براہ کرم ڈاکٹر سے مشورہ کریں (Please consult a registered doctor)");
+            analysis.recommendations.push("آرام کریں اور ہائیڈریٹڈ رہیں (Rest and stay hydrated)");
+        }
 
         return analysis;
     }
