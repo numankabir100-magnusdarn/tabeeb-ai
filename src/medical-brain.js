@@ -46,9 +46,27 @@ class MedicalBrain {
             
             // Urgent Symptoms
             urgent: {
+                'high fever': {
+                    synonyms: ['bukhar', 'high temperature', 'tap', 'body very hot', 'feverish'],
+                    urgency: 'URGENT',
+                    possibleConditions: ['Viral Infection', 'Malaria', 'Typhoid', 'Dengue'],
+                    followUpQuestions: [
+                        'کیا بخار 103°F (39.4°C) سے زیادہ ہے؟',
+                        'کتنے دن سے بخار ہے؟'
                     ],
-                    action: '24 گھنٹوں کے اندر ڈاکٹر سے رابطہ کریں',
-                    urduAction: '24 گھنٹوں کے اندر ڈاکٹر سے رابطہ کریں'
+                    action: 'بخار کی دوا (جیسے Panadol) لیں اور پانی زیادہ پیئیں۔ (Take paracetamol and hydrate)',
+                    urduAction: 'بخار کی دوا (جیسے Panadol) لیں اور پانی زیادہ پیئیں۔'
+                },
+                'weight loss': {
+                    synonyms: ['weightloss', 'wazan kam', 'losing weight', 'patla'],
+                    urgency: 'URGENT',
+                    possibleConditions: ['Hyperthyroidism', 'Diabetes', 'Tuberculosis (TB)', 'Nutritional Deficiency'],
+                    followUpQuestions: [
+                        'کیا آپ نے جان بوجھ کر وزن کم کیا ہے؟',
+                        'کیا آپ کو بھوک لگ رہی ہے؟'
+                    ],
+                    action: 'اچانک وزن گرنا خطرناک ہو سکتا ہے، ڈاکٹر سے مکمل چیک اپ کروائیں۔ (Consult a doctor for unexplained weight loss)',
+                    urduAction: 'اچانک وزن گرنا خطرناک ہو سکتا ہے، ڈاکٹر سے مکمل چیک اپ کروائیں۔'
                 }
             },
             
