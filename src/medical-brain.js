@@ -16,67 +16,36 @@ class MedicalBrain {
 
     // Initialize Medical Knowledge Base
     initializeMedicalKnowledge() {
-        // Symptom-Condition Mapping with Pakistani Context
+        // Symptom-Condition Mapping with expanded NLP semantic routing for offline execution
         this.symptomDatabase = {
             // Emergency Symptoms (Red Flags)
             emergency: {
                 'chest pain': {
+                    synonyms: ['chest pressure', 'chest tightness', 'heart pain', 'sine mein dard', 'seene me dard'],
                     urgency: 'EMERGENCY',
                     possibleConditions: ['Heart Attack', 'Angina', 'Pulmonary Embolism', 'Aortic Dissection'],
                     followUpQuestions: [
                         'کیا آپ کو سینے میں دباؤ یا وزن محسوس ہو رہا ہے؟',
-                        'کیا درد بازو، گردن، یا جبڑے تک پھیل رہا ہے؟',
-                        'کیا آپ کو پسینہ آ رہا ہے یا nausea محسوس ہو رہا ہے؟'
+                        'کیا درد بازو، گردن، یا جبڑے تک پھیل رہا ہے؟'
                     ],
-                    action: 'فوری طور پر ایمرجنسی روم جائیں یا 1122 پر کال کریں',
-                    urduAction: 'فوری طور پر ایمرجنسی روم جائیں یا 1122 پر کال کریں'
+                    action: 'فوری طور پر ایمرجنسی روم جائیں یا 1122 پر کال کریں (Call 1122 immediately)'
                 },
                 'difficulty breathing': {
+                    synonyms: ['shortness of breath', 'cant breathe', 'sans lene mein masla', 'saans'],
                     urgency: 'EMERGENCY',
-                    possibleConditions: ['Asthma Attack', 'COPD Exacerbation', 'Pulmonary Embolism', 'Heart Failure'],
-                    followUpQuestions: [
-                        'کیا آپ کی آنکھوں یا ہونٹوں میں نیلے پن ہے؟',
-                        'کیا آپ کی چھاتی میں کھنچاہٹ محسوس ہو رہا ہے؟',
-                        'کیا آپ بولنے میں مشکل سے دوچار ہیں؟'
-                    ],
-                    action: 'فوری طور پر ایمرجنسی روم جائیں یا 1122 پر کال کریں',
-                    urduAction: 'فوری طور پر ایمرجنسی روم جائیں یا 1122 پر کال کریں'
+                    possibleConditions: ['Asthma Attack', 'COPD Exacerbation', 'Heart Failure'],
+                    action: 'فوری طور پر ایمرجنسی روم جائیں یا 1122 پر کال کریں (Call 1122 immediately)'
                 },
-                'severe headache': {
+                'severe bleeding': {
+                    synonyms: ['heavy bleeding', 'khoon', 'bleeding non stop', 'hemorrhage'],
                     urgency: 'EMERGENCY',
-                    possibleConditions: ['Subarachnoid Hemorrhage', 'Meningitis', 'Brain Tumor', 'Stroke'],
-                    followUpQuestions: [
-                        'کیا یہ آپ کی زندگی کا سب سے برا سر درد ہے؟',
-                        'کیا آپ کو گردن میں سختی یا بوجھ محسوس ہو رہا ہے؟',
-                        'کیا آپ کو روشنی سے چینک محسوس ہو رہا ہے؟'
-                    ],
-                    action: 'فوری طور پر ایمرجنسی روم جائیں یا 1122 پر کال کریں',
-                    urduAction: 'فوری طور پر ایمرجنسی روم جائیں یا 1122 پر کال کریں'
+                    possibleConditions: ['Arterial Bleed', 'Deep Laceration'],
+                    action: 'زخم پر دباؤ ڈالیں اور فوری طور پر ایمرجنسی روم جائیں (Apply pressure and go to ER)'
                 }
             },
             
-            // Urgent Symptoms (Orange Flags)
+            // Urgent Symptoms
             urgent: {
-                'high fever': {
-                    urgency: 'URGENT',
-                    threshold: 103, // Fahrenheit
-                    possibleConditions: ['Dengue Fever', 'Typhoid', 'Malaria', 'COVID-19', 'Bacterial Infection'],
-                    followUpQuestions: [
-                        'کیا بخار 103°F سے زیادہ ہے؟',
-                        'کیا آپ کو جلد پر چھالا یا rash ہے؟',
-                        'کیا آپ کو جوڑوں میں درد ہے؟'
-                    ],
-                    action: '24 گھنٹوں کے اندر ڈاکٹر سے رابطہ کریں',
-                    urduAction: '24 گھنٹوں کے اندر ڈاکٹر سے رابطہ کریں'
-                },
-                'persistent vomiting': {
-                    urgency: 'URGENT',
-                    duration: 'more than 24 hours',
-                    possibleConditions: ['Gastroenteritis', 'Food Poisoning', 'Appendicitis', 'Migraine'],
-                    followUpQuestions: [
-                        'کیا قے میں خون یا پیٹ بھرا ہے؟',
-                        'کیا آپ کو شدید پیٹ کا درد ہے؟',
-                        'کیا آپ کو پانی پینے سے بھی قے آتا ہے؟'
                     ],
                     action: '24 گھنٹوں کے اندر ڈاکٹر سے رابطہ کریں',
                     urduAction: '24 گھنٹوں کے اندر ڈاکٹر سے رابطہ کریں'
@@ -203,40 +172,48 @@ class MedicalBrain {
     // Initialize Triage Protocols
     initializeTriageProtocols() {
         this.triageAlgorithm = {
-            // Decision Tree for Emergency Detection
+            // Decision Tree for Emergency Detection using Semantic/Fuzzy Matching
             emergencyDetection: (symptoms, severity, duration) => {
-                const emergencyKeywords = [
-                    'chest pain', 'chest pressure', 'chest tightness',
-                    'difficulty breathing', 'shortness of breath', 'can\'t breathe',
-                    'severe headache', 'worst headache', 'thunderclap headache',
-                    'loss of consciousness', 'fainting', 'passed out',
-                    'confusion', 'disorientation', 'slurred speech',
-                    'numbness', 'weakness', 'facial drooping',
-                    'vision changes', 'vision loss', 'double vision',
-                    'severe bleeding', 'uncontrollable bleeding'
-                ];
+                let isEmergency = false;
+                let highestUrgencyMatched = 'HOME_CARE';
+                let primaryAction = null;
+                let primaryExplanation = null;
 
-                // Check for emergency keywords
-                const hasEmergencySymptom = symptoms.some(symptom => 
-                    emergencyKeywords.some(keyword => 
-                        symptom.toLowerCase().includes(keyword)
-                    )
-                );
+                const fullText = symptoms.join(' ').toLowerCase();
 
-                // Check severity level
+                // Scan through strict symptom database to find maximum urgencies
+                Object.entries(this.symptomDatabase).forEach(([category, conditions]) => {
+                    Object.entries(conditions).forEach(([mainKeyword, data]) => {
+                        const triggers = [mainKeyword.toLowerCase(), ...(data.synonyms || [])];
+                        if (triggers.some(trigger => fullText.includes(trigger.toLowerCase()))) {
+                            if (data.urgency === 'EMERGENCY') {
+                                isEmergency = true;
+                                highestUrgencyMatched = 'EMERGENCY';
+                                primaryAction = data.action;
+                                primaryExplanation = `ہمیں ہنگامی علامات کا پتا چلا ہے (We detected emergency keywords like ${mainKeyword})`;
+                            } else if (data.urgency === 'URGENT' && highestUrgencyMatched !== 'EMERGENCY') {
+                                highestUrgencyMatched = 'URGENT';
+                                primaryAction = data.action;
+                                primaryExplanation = `علامات سنگین ہیں، ڈاکٹر کو دکھائیں (Symptoms correspond to ${mainKeyword})`;
+                            } else if (data.urgency === 'HOME_CARE' && highestUrgencyMatched === 'HOME_CARE') {
+                                primaryAction = primaryAction || data.action;
+                                primaryExplanation = primaryExplanation || `یہ درمیانی علامات ہیں (Symptoms indicate mild illness like ${mainKeyword})`;
+                            }
+                        }
+                    });
+                });
+
                 const isSevere = severity === 'severe';
-
-                // Check duration for certain conditions
-                const isProlonged = duration && (
-                    duration.includes('week') || 
-                    duration.includes('month') ||
-                    duration.includes('more than 2 weeks')
-                );
+                if (isSevere && highestUrgencyMatched === 'HOME_CARE') highestUrgencyMatched = 'URGENT';
 
                 return {
-                    isEmergency: hasEmergencySymptom || isSevere,
-                    needsUrgentCare: isProlonged || hasEmergencySymptom,
-                    confidence: this.calculateConfidence(symptoms, severity, duration)
+                    isEmergency: isEmergency || (isSevere && highestUrgencyMatched === 'EMERGENCY'),
+                    triageLevel: highestUrgencyMatched,
+                    urgency: highestUrgencyMatched,
+                    action: primaryAction || 'گھر پر آرام کریں (Rest and monitor symptoms)',
+                    explanation: primaryExplanation || 'علامات کی شدت کم ہے (Symptoms are mild)',
+                    needsUrgentCare: highestUrgencyMatched === 'URGENT' || isEmergency,
+                    confidence: 0.8
                 };
             },
 
@@ -566,32 +543,26 @@ class MedicalBrain {
         return variations[symptom] || symptom;
     }
 
-    // Get Detailed Analysis
+    // Get Detailed Analysis via Semantic String Inclusion
     getDetailedAnalysis(symptoms, userContext) {
         const analysis = {
             possibleConditions: [],
             followUpQuestions: [],
-            recommendations: [],
-            riskFactors: [],
-            lifestyleAdvice: []
+            recommendations: []
         };
 
-        symptoms.forEach(symptom => {
-            // Check each category
-            Object.entries(this.symptomDatabase).forEach(([category, conditions]) => {
-                if (conditions[symptom]) {
-                    const conditionData = conditions[symptom];
-                    
-                    // Add possible conditions
-                    analysis.possibleConditions.push(...conditionData.possibleConditions);
-                    
-                    // Add follow-up questions
-                    analysis.followUpQuestions.push(...conditionData.followUpQuestions);
-                    
-                    // Add recommendations
-                    if (conditionData.remedies) {
-                        analysis.recommendations.push(...conditionData.remedies);
-                    }
+        const fullText = symptoms.join(' ').toLowerCase();
+
+        // Cross-reference user bulk text with our optimized dictionary
+        Object.values(this.symptomDatabase).forEach(category => {
+            Object.entries(category).forEach(([mainKeyword, data]) => {
+                const triggers = [mainKeyword.toLowerCase(), ...(data.synonyms || [])];
+                
+                // If any trigger exists anywhere in the user's uncomma'd raw text
+                if (triggers.some(trigger => fullText.includes(trigger.toLowerCase()))) {
+                    analysis.possibleConditions.push(...(data.possibleConditions || []));
+                    if (data.followUpQuestions) analysis.followUpQuestions.push(...data.followUpQuestions);
+                    if (data.action) analysis.recommendations.push(data.action);
                 }
             });
         });
@@ -599,8 +570,9 @@ class MedicalBrain {
         // Remove duplicates and prioritize
         analysis.possibleConditions = [...new Set(analysis.possibleConditions)].slice(0, 5);
         analysis.followUpQuestions = [...new Set(analysis.followUpQuestions)].slice(0, 3);
+        analysis.recommendations = [...new Set(analysis.recommendations)].slice(0, 5);
         
-        // Robust offline fallback rendering if nothing mapped successfully
+        // Robust offline fallback rendering if NOTHING matched despite fuzzy logic
         if (analysis.possibleConditions.length === 0) {
             analysis.possibleConditions.push("General Unknown Symptoms (عام غیر واضح علامات)");
             analysis.recommendations.push("براہ کرم ڈاکٹر سے مشورہ کریں (Please consult a registered doctor)");
